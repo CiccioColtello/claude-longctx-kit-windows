@@ -1,6 +1,7 @@
 # CI for the longctx kit.
 #
-# STATUS: EXECUTED -- two runs on 2026-10-06 (on push).
+# STATUS: EXECUTED -- three runs on 2026-10-06 (on push), green on both legs at
+# the third.
 # Run 1: windows-latest leg green (1 m 14 s). macos-latest leg red in 7 s on a
 # null $env:TEMP in merge-claude-settings.ps1 -SelfTest (the variable does not
 # exist on macOS) -- fixed in the same round (OS-aware sandbox root,
@@ -12,9 +13,13 @@
 # keeps the handle lock; on macOS/Linux the unwritable target is a read-only
 # sandbox directory (EACCES at the save's first write), same three assertions.
 # RED->GREEN proven locally on Windows in both interpreters, plus the null-env
-# proxy; the Unix branch first executes on the re-run that is pending. It is
-# committed as an executable specification of the test matrix: what is checked,
-# on which OS, with which shell.
+# proxy; the Unix branch executed for the first time on the run below.
+# Run 3 (the fix above): BOTH legs green. On the macOS runner the selftest
+# completed 44 PASS / 0 FAIL (case 14a/b/c pass on the Unix branch), and the
+# smoke harness (22 PASS / 0 FAIL) plus `bash -n` on the three .sh adapters ran
+# on macOS for the first time, green. It is committed as an executable
+# specification of the test matrix: what is checked, on which OS, with which
+# shell.
 # No secrets, no deploy steps.
 #
 # What it runs, per leg:

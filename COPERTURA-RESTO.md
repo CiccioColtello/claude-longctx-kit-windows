@@ -5,8 +5,9 @@ and what was **not**, with the evidence that produced each claim. If a claim is 
 listed under "Coverage", treat it as unverified.
 
 Verification date: 2026-10-06 (re-run after the post-audit fix campaign, again
-after the StrictMode member-access class fix, and again after campaign #3 — classes
-F1–F8 plus the scan-budget boundary class; the numbers below describe the state
+after the StrictMode member-access class fix, again after campaign #3 — classes
+F1–F8 plus the scan-budget boundary class — and once more after CI run 3, the macOS
+lock-case fix, green on both CI legs; the numbers below describe the state
 **after** the fixes, with the macOS core mirrored byte-for-byte).
 Toolchain: Windows 11, Windows PowerShell 5.1 and PowerShell 7 (pwsh).
 
@@ -253,10 +254,14 @@ repository.
 
 ## Rest (NOT proven — do not claim these)
 
-1. **macOS runtime.** No macOS machine was available. The `.sh` installers
-   (`install.sh`, `uninstall.sh`, `verify.sh`) were reviewed and syntax-checked
-   (`bash -n`, exit 0, Git Bash on Windows) but never executed,
-   and the pwsh smoke was never run under real macOS. The backslash-path fix in
+1. **macOS runtime.** No macOS machine was available for on-device validation. The `.sh`
+   installers (`install.sh`, `uninstall.sh`, `verify.sh`) were reviewed and syntax-checked
+   (`bash -n`: exit 0 on Git Bash on Windows; executed on a real macOS runner in CI run 3,
+   exit 0, 2026-10-06) but never executed end-to-end. The pwsh smoke harness ran under
+   real macOS for the first time in CI run 3: green (22 PASS / 0 FAIL; the longctx-init
+   leg ran), as did the merge-engine selftest (44 PASS / 0 FAIL, case 14a/b/c on the Unix
+   branch). Not covered: runtime behavior of the `.sh` adapters and the on-device
+   `TEST-PLAN-MAC.md` procedure. The backslash-path fix in
    the two scripts is reasoned from the pwsh path semantics and exercised under
    pwsh on Windows only. Partial mitigation: the macOS repository's PowerShell half
    is byte-identical to the Windows one (§1) and the shipped security probe passes
@@ -300,7 +305,7 @@ repository.
    activation on Windows (manual, one machine, not a shipped test).
 10. **T3/T8 stress matrices not shipped.** The large-state injection and
     cap-boundary stress matrices live in the internal build workspace only.
-11. **CI executed twice (2026-10-06), not pinning-proof.** `.github/workflows/ci.yml`
+11. **CI executed three times (2026-10-06), not pinning-proof.** `.github/workflows/ci.yml`
     uses `actions/checkout@v4` (tag, not SHA) and floating runner labels
     (KNOWN-ISSUES #15). Run 1: `windows-latest` leg green; `macos-latest` leg
     red in 7 s on a null `$env:TEMP` in the merge-engine selftest — class fix
@@ -309,7 +314,10 @@ repository.
     simulation cannot fail on Unix, where FileShare locks are advisory — now
     OS-branched (read-only sandbox directory on Unix; same three assertions;
     RED->GREEN proven locally on Windows in both interpreters and the null-env
-    proxy). Re-run pending. Two runs are not a stability proof.
+    proxy). Run 3 (the fix above): BOTH legs green; on the macOS runner the
+    selftest completed 44 PASS / 0 FAIL (14a/b/c on the Unix branch) and the smoke
+    harness (22/0) plus `bash -n` ran on macOS for the first time. Three runs are
+    not a stability proof.
 12. **Uninstall semantic deviation (declared).** `permissions.deny` rules are kept
     by default on uninstall; removal requires the explicit `-RemoveDenyRules`
     switch. Declared deviation, not covered by shipped tests.
@@ -320,8 +328,9 @@ repository.
     platform where mandatory locks can fail the atomic replace, so the orphaned-
     temp discrimination of the F5 fix is reproducible. On macOS/Linux locks are
     advisory, so the same case uses a read-only sandbox directory (the save fails
-    with EACCES at its first write): it asserts fail-closed and no-orphan, NOT the
-    failed-replace orphan path, which no Unix simulation reproduces. The
+    with EACCES at its first write; this Unix branch executed on a real macOS
+    runner in CI run 3 — 14a/b/c PASS): it asserts fail-closed and no-orphan, NOT
+    the failed-replace orphan path, which no Unix simulation reproduces. The
     development probe (`FileShare::None`, internal workspace) is not shipped.
 14. **Campaign #3 class probes are not shipped.** `p1`–`p4`, `p6`–`p8`,
     `boundary-fi` and `p8-e-locale` live in the internal build workspace. Their
@@ -331,7 +340,9 @@ repository.
     parity invariant have no shipped equivalent; the F5 retry/no-orphan contract
     is asserted by selftest case 14 (Windows branch; see item 13).
 15. **macOS shell adapters: syntax only.** `bash -n` proves the three `.sh` files
-    parse; nothing about their runtime behavior on macOS is proven (see item 1).
+    parse — executed on Git Bash on Windows and, in CI run 3, on a real macOS
+    runner (all three, exit 0); nothing about their runtime behavior on macOS is
+    proven (see item 1).
 16. Anything not listed under Coverage is unverified: assume it.
 
 ## Evidence locations (internal build workspace, not distributed)

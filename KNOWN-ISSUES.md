@@ -133,19 +133,23 @@ other documents stay valid.
 
 ## 5. macOS path is untested (BETA)
 
-**Symptom.** The macOS install adapters and the macOS hook wiring are shipped but have
-never been executed on macOS.
+**Symptom.** The macOS install adapters (`install.sh` / `uninstall.sh` / `verify.sh`) are
+shipped but have never been executed on macOS; the pwsh side of this repository has now
+run on a macOS runner (CI run 3, 2026-10-06 — selftest, smoke harness and shell syntax
+checks, all green).
 
 **Impact.** A macOS user may hit path/quoting differences not seen on Windows.
 
 **Cause.** Development and testing happened on Windows only. The changelog states the
-macOS path is BETA and untested; `TEST-PLAN-MAC.md` records the intended validation
-steps; the CI workflow ran twice on 2026-10-06 (on push): the macOS leg of the first
-run failed in 7 s on a null `$env:TEMP`, and the macOS leg of the second (after that
-fix) went red on the case-14 lock simulation — FileShare locks are advisory on Unix,
-so the case could never pass there. Both Windows-only assumptions in the selftest
-itself, both fixed at class level; re-run pending [measured:
-GitHub Actions runs, 2026-10-06; CHANGELOG.md, 0.1.0 notes].
+macOS path is BETA; `TEST-PLAN-MAC.md` records the intended on-device validation steps.
+The CI workflow ran three times on 2026-10-06 (on push): the macOS leg of run 1 failed in
+7 s on a null `$env:TEMP`, and the macOS leg of run 2 (after that fix) went red on the
+case-14 lock simulation — FileShare locks are advisory on Unix, so the case could never
+pass there. Both were Windows-only assumptions in the selftest itself, both fixed at
+class level; run 3 passed on both legs — the selftest completed on the macOS runner
+(44 PASS / 0 FAIL, case 14a/b/c on the Unix branch) and the smoke harness plus `bash -n`
+ran on macOS for the first time, green [measured: GitHub Actions runs, 2026-10-06;
+CHANGELOG.md, 0.1.0 notes].
 
 **Partial mitigation (measured).** The PowerShell half of the macOS repository is now
 byte-identical to the Windows one (`tools/verify-parity.ps1`: 31/31 core files,
@@ -153,9 +157,10 @@ exit 0; the two `install.ps1`/`uninstall.ps1` copies are byte-identical too), an
 security probe was executed against the macOS tree itself — ownership / settings-dir
 refusal and the quote-split deny cases pass there under both interpreters
 [measured: `core/tests/probe-hardening.ps1` on the macOS repo, 19 PASS / 0 FAIL under
-Windows PowerShell 5.1 and pwsh 7]. What remains untested is the part only a real Mac
-can exercise: the `.sh` adapters, path semantics, and pwsh-as-the-default-hook-
-interpreter.
+Windows PowerShell 5.1 and pwsh 7]. What remains untested is the part only a real Mac can
+exercise on-device: the `.sh` adapters' runtime behavior (only `bash -n` ran) and the
+manual `TEST-PLAN-MAC.md` procedure — the pwsh hook wiring itself executed on macOS in
+CI run 3 (smoke harness, green).
 
 **Workaround.** Use the Windows path, or validate the macOS steps from
 `TEST-PLAN-MAC.md` before relying on it. Report what breaks.
@@ -416,10 +421,11 @@ deferred [code: .github/workflows/ci.yml].
 **Workaround.** Before relying on CI, pin `actions/checkout` to a commit SHA and
 consider versioned runner images.
 
-**Status.** Open (executed twice on 2026-10-06: the Windows legs were green in both
-runs; the macOS legs were red on two Windows-only assumptions in the selftest itself —
-null `$env:TEMP`, then the case-14 lock simulation — both fixed, re-run pending; see
-also `COPERTURA-RESTO.md`).
+**Status.** Open (executed three times on 2026-10-06: runs 1-2 went red on the macOS legs
+on two Windows-only assumptions in the selftest itself — null `$env:TEMP`, then the
+case-14 lock simulation — both fixed; run 3 was green on both legs. The tag-pinned
+checkout and the floating runner labels remain, so a green run is not a stability proof;
+see also `COPERTURA-RESTO.md`).
 
 ## 16. Scan budget: very long commands are denied fail-closed by the opt-in sensor (derived)
 

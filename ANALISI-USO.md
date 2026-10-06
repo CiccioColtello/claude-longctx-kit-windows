@@ -257,11 +257,13 @@ re-litigated after every compaction.
   cheap: it caps what *it* adds at 6000 chars per start event.
 - It does not prune archives, summarise old ones, or sync state between machines.
   `.agent/` is per project, on disk, local.
-- It is Windows-tested; the macOS path is BETA and largely not executed — the
-  merge-engine `-SelfTest` has run twice on a macOS runner via CI on 2026-10-06 and
-  exposed two Windows-only assumptions in the selftest itself (a null `$env:TEMP`
-  sandbox root; a lock simulation that cannot fail on Unix, where locks are
-  advisory), both fixed at class level; re-run pending [measured: CHANGELOG.md,
-  0.1.0 notes; GitHub Actions runs, 2026-10-06].
+- It is Windows-tested; the macOS path is BETA, CI-verified, not yet run on-device —
+  the merge-engine `-SelfTest` (44 PASS / 0 FAIL), the smoke harness (22 PASS / 0 FAIL)
+  and the shell syntax checks now run green on a real macOS runner via CI run 3
+  (2026-10-06), after runs 1-2 had exposed two Windows-only assumptions in the selftest
+  itself (a null `$env:TEMP` sandbox root; a lock simulation that cannot fail on Unix,
+  where locks are advisory), both fixed at class level. The `.sh` adapters have still
+  not been executed on a Mac [measured: CHANGELOG.md, 0.1.0 notes; GitHub Actions runs,
+  2026-10-06].
 - Failure memory is bounded: past 300 rows the oldest half is rotated out, so very old
   failures are no longer injected (they remain in the archive copy made at rotation).
