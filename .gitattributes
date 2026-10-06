@@ -1,0 +1,8 @@
+# Line-ending policy: every tracked text file is normalized to LF in the
+# index and checked out as LF on every platform, so a fresh clone is
+# byte-identical to the release manifest whether it lands on Windows, macOS
+# or Linux (a different core.autocrlf / editor setting cannot alter a
+# checkout). The .sh entry points in particular must keep LF: a CRLF
+# checkout breaks the shebang on macOS ("bad interpreter" / stray \r — see
+# TEST-PLAN-MAC.md, failure signatures).
+* text=auto eol=lf

@@ -1,0 +1,6 @@
+STAGE-REPORT.txt
+.DS_Store
+Thumbs.db
+*.bak-*
+*.tmp-*
+desktop.ini

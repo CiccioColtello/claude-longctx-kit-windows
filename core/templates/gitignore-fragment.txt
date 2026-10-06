@@ -1,0 +1,9 @@
+# longctx kit — .gitignore fragment to add to the project .gitignore
+# (one line per entry; copy-paste the lines below)
+
+# Agent state (local operating notes: goal, decisions, failures, compaction archives).
+# DEFAULT: everything out of git. If you want to version the decisions, uncomment
+# the next two lines and add "!.agent/DECISIONS.md".
+.agent/
+# Claude Code local settings (never shared).
+.claude/settings.local.json

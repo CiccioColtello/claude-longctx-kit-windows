@@ -1,0 +1,43 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2026-10-06
+
+### Added
+
+- **Hooks** for long Claude Code sessions (shipped under the kit root and registered in the user-level `settings.json`; project-level wiring is optional):
+  - `SessionStart` injection: `.agent/CONTEXT.md`, `.agent/STATE.md`, the latest decisions and the latest failures, capped at 6000 characters.
+  - `PreCompact`: snapshot of the current `.agent/` state, plus an optional local Ollama digest (best-effort, skip-if-unavailable; the local model is never treated as a security authority).
+  - `PostCompact`: archives the compaction summary under `.agent/archive/`.
+  - Tool-failure logging into `.agent/FAILURES.md` (one redacted line per reproducible error).
+  - Opt-in `PreToolUse` sensor (deny gate; off by default; fail-open on errors).
+- **Subagents** (5): `repo-explorer`, `test-diagnostician`, `log-compressor`, `context-archivist`, `security-auditor`.
+- **Skills** (3): `long-context`, `context-maintenance`, `repo-exploration`.
+- **Settings merge engine**: `core/lib/merge-claude-settings.ps1`, a non-destructive merge of the kit's hooks/deny fragments into an existing `settings.json`, with a built-in `-SelfTest` matrix.
+- **Installers**: `install.ps1`, `uninstall.ps1`, `verify.ps1` (dry-run by default, `-Apply` to execute), plus macOS shell adapters mirroring them (`install.sh`, `uninstall.sh`, `verify.sh`).
+- **Portable smoke harness**: `core/tests/smoke.ps1`.
+- **Documentation**: `README.md`, `ANALISI-USO.md`, `FORECAST-TOKEN.md`, `KNOWN-ISSUES.md`, `COPERTURA-RESTO.md`, `TEST-PLAN-MAC.md`.
+- **CI**: `.github/workflows/ci.yml`, a push + pull_request matrix over `windows-latest` and `macos-latest`.
+
+### Fixed
+
+- **Installer dry-run aborted on a real `settings.json`** whose hook entries have no `args` (class: direct member access on user JSON under `Set-StrictMode -Version Latest`, which aborted the whole merge with `PropertyNotFoundException`). `Test-OurEntry` now uses the defensive `PSObject.Properties` pattern — the same one `uninstall.ps1`, `verify.ps1` and `bin/longctx.ps1` already used. Non-object `hooks`/`permissions`/root now fail **closed** with a clear message instead of being silently mis-merged (previously reported `updated`, then dropped the added hooks at save time); null-valued `hooks`/`permissions` are treated as empty. The `-SelfTest` matrix now itself runs under `Set-StrictMode -Version Latest` and grew the cases that discriminate this class (44 checks, Windows PowerShell 5.1 and PowerShell 7).
+- **Deny-rule delimiter classes missed path-prefixed invocations** (class F1): several sensor rules anchored only on `^`, whitespace or shell separators, so the same command invoked with a leading path (`/bin/rm -rf ...`, `./rm -rf ...`) was not matched. Every rule whose pattern can be preceded by a path separator now includes the separator in its delimiter class, swept structurally over the whole rule table (all rules extracted and checked, matrix of invocation forms 47/47).
+- **Ownership gate hardened** (class F2): `install.ps1` / `uninstall.ps1` refuse a `-KitRoot` that is an ancestor of the home directory or equal to the settings directory (`<home>/.claude`) — the uninstall case was the severe one: every user-level hook under it would have been classified as the kit's and removed. The default shape (`<home>/.claude/longctx`) is still accepted, and the refusal leaves `settings.json` byte-untouched. The macOS copies previously lacked the settings-dir part; they are now byte-identical and the case is asserted by the shipped security probe.
+- **Non-OS-aware path canonicalization** (class F3): the sensitive-path matcher now canonicalizes with the separator semantics of the target flavor (`windows`, `posix`, `auto`) instead of assuming backslashes — a POSIX path with a trailing space or a trailing dot segment is no longer rewritten as if it were a Windows path, and vice versa.
+- **`tools/verify-parity.ps1` proved parity over a subset** (class F4): the file enumeration did not use `-Force`, so hidden dot-files — everything under `.claude/` — were invisible and the tool printed `PARITY OK` without ever comparing the critical subtree. It now enumerates hidden files, refuses with exit 2 if it cannot prove it covered `.claude/` (missing in both cores, or enumeration seeing no files), and its SHA-256 helper throws on unreadable input instead of skipping a file.
+- **Settings save retried and cleaned up** (class F5): `Save-ClaudeSettings` retries the atomic replace (3 × 25 ms) and removes its temporary file in a `finally`, so a transient lock no longer leaves an orphan `.tmp` next to `settings.json`; a persistent failure reports honestly and leaves the original file intact.
+- **Exactly-once guard symmetric across the four event hooks** (class F6): the guard previously existed only in `Invoke-SessionStart` and read only `.claude/settings.json`, so a project wired the documented way (settings mention + local hook copy) still ran `PreCompact`, `PostCompact` and `PostToolUseFailure` twice — two snapshots, two failure rows, up to two 45 s digest calls per compaction. The guard is now a shared helper (`Test-ProjectLocalInjector`) applied by all four hooks, and it scans `settings.json` **and** `settings.local.json`.
+- **Quote-split deny evasion and its log twin** (class F7): `cat ."env"` and `~/."claude"/settings.json` — the quote characters split the token so the raw regexes never matched — were allowed by the deny gate, and once denied by another rule the failure log kept the reference **unmasked**. The gate now also scans the de-quoted spelling and the masker re-classifies the original quote-inclusive spans against it. Asserted by shipped tests (probe + smoke).
+- **Degraded fallback in the hooks without `Filter-AgentText.ps1`** (class F8): a hooks copy missing the filter library made `Limit-Text` undefined, so `SessionStart` injected nothing and `PreCompact` / `PostCompact` wrote no archive — a silent fail-open with zero effect. The degradation path now carries a minimal `Limit-Text` twin, keeps the capping contract, and records the reduced-redaction degradation row instead of staying silent.
+- **Scan-budget estimate doubled for commands without quotes** (class found live on the source workspace's contract harness): the budget estimate summed the raw command text and its quote-stripped twin **unconditionally**, so a command at exactly the declared 200,000-character limit was estimated at 400,001 and denied fail-closed as oversize. The sum is now conditional (the twin is added only when it differs). The boundary is asserted by three shipped smoke checks: at-limit allowed, over-limit denied `[input-oversize]`, at-limit-with-a-quote denied `[scanner-budget]` — and their discriminating power was RED-proved separately by fault injection on a kit copy.
+
+### Notes
+
+- **Windows path: tested.** The hooks, the merge engine `-SelfTest` matrix (44 checks), the smoke harness (22 checks) and the shipped security probe (`core/tests/probe-hardening.ps1`, 19 checks) were exercised on Windows under both Windows PowerShell 5.1 and PowerShell 7.
+- **macOS: BETA, untested.** The shell adapters and everything on the macOS leg are shipped as-is and have never been executed on macOS. `TEST-PLAN-MAC.md` records the intended validation steps. The PowerShell half of the macOS repository is byte-identical to the Windows one (parity asserted mechanically by `tools/verify-parity.ps1`), and the shipped probe passes against the macOS tree under both interpreters on Windows — what remains unexecuted is macOS itself.
+- **CI: staged, not executed.** `.github/workflows/ci.yml` has never run on GitHub Actions; it is committed as an executable specification of the intended matrix. No secrets and no deploy steps are configured.

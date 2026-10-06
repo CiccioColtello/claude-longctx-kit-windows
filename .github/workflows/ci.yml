@@ -1,0 +1,73 @@
+# CI for the longctx kit.
+#
+# STATUS: STAGED, NOT EXECUTED.
+# This workflow has never been run on GitHub Actions. It is committed as an
+# executable specification of the intended test matrix: what is checked, on
+# which OS, with which shell. No secrets, no deploy steps.
+#
+# What it runs, per leg:
+#   - core/lib/merge-claude-settings.ps1 -SelfTest   (pwsh; on Windows also
+#     via powershell.exe, i.e. Windows PowerShell 5.1)
+#   - core/tests/smoke.ps1                           (pwsh; on Windows also
+#     via powershell.exe)
+#   - bash -n over every *.sh file, macOS leg only (skipped when the tree
+#     has no shell scripts, so the macOS leg stays green on the
+#     PowerShell-only repository)
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PowerShell version
+        shell: pwsh
+        run: $PSVersionTable.PSVersion.ToString()
+
+      - name: Merge engine self-test (pwsh)
+        shell: pwsh
+        run: pwsh -NoProfile -File core/lib/merge-claude-settings.ps1 -SelfTest
+
+      - name: Merge engine self-test (Windows PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File core/lib/merge-claude-settings.ps1 -SelfTest
+
+      - name: Smoke harness (pwsh)
+        shell: pwsh
+        run: pwsh -NoProfile -File core/tests/smoke.ps1
+
+      - name: Smoke harness (Windows PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File core/tests/smoke.ps1
+
+      - name: Shell script lint (macOS leg)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r -d '' f; do
+            found=1
+            echo "bash -n $f"
+            bash -n "$f"
+          done < <(find . -name .git -prune -o -type f -name '*.sh' -print0)
+          if [ "$found" -eq 0 ]; then
+            echo "No .sh files present; nothing to lint."
+          fi
