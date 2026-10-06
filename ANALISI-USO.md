@@ -257,8 +257,9 @@ re-litigated after every compaction.
   cheap: it caps what *it* adds at 6000 chars per start event.
 - It does not prune archives, summarise old ones, or sync state between machines.
   `.agent/` is per project, on disk, local.
-- It is Windows-tested; the macOS path is BETA and has not been executed
-  [measured: CHANGELOG.md, 0.1.0 notes]. The CI workflow is staged, not executed
-  [measured: .github/workflows/ci.yml header].
+- It is Windows-tested; the macOS path is BETA and largely not executed — the
+  merge-engine `-SelfTest` first ran on a macOS runner via CI on 2026-10-06 (red on a
+  null `$env:TEMP`, class fixed; re-run pending) [measured: CHANGELOG.md, 0.1.0
+  notes; GitHub Actions runs, 2026-10-06].
 - Failure memory is bounded: past 300 rows the oldest half is rotated out, so very old
   failures are no longer injected (they remain in the archive copy made at rotation).

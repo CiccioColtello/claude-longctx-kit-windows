@@ -300,9 +300,12 @@ repository.
    activation on Windows (manual, one machine, not a shipped test).
 10. **T3/T8 stress matrices not shipped.** The large-state injection and
     cap-boundary stress matrices live in the internal build workspace only.
-11. **CI staged, never executed, not pinning-proof.** `.github/workflows/ci.yml`
+11. **CI executed once (2026-10-06), not pinning-proof.** `.github/workflows/ci.yml`
     uses `actions/checkout@v4` (tag, not SHA) and floating runner labels
-    (KNOWN-ISSUES #15).
+    (KNOWN-ISSUES #15). First run: `windows-latest` leg green; `macos-latest` leg
+    red in 7 s on a null `$env:TEMP` in the merge-engine selftest — class fix
+    applied (OS-aware sandbox root; RED->GREEN proven locally), re-run pending.
+    One run is not a stability proof.
 12. **Uninstall semantic deviation (declared).** `permissions.deny` rules are kept
     by default on uninstall; removal requires the explicit `-RemoveDenyRules`
     switch. Declared deviation, not covered by shipped tests.

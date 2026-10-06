@@ -1,9 +1,13 @@
 # CI for the longctx kit.
 #
-# STATUS: STAGED, NOT EXECUTED.
-# This workflow has never been run on GitHub Actions. It is committed as an
-# executable specification of the intended test matrix: what is checked, on
-# which OS, with which shell. No secrets, no deploy steps.
+# STATUS: EXECUTED -- first run 2026-10-06 (on push).
+# windows-latest leg: green (1 m 14 s). macos-latest leg: red in 7 s on a null
+# $env:TEMP in merge-claude-settings.ps1 -SelfTest (the variable does not exist
+# on macOS). Class fixed in the same round (OS-aware sandbox root,
+# [System.IO.Path]::GetTempPath(); RED->GREEN proven locally); re-run after the
+# fix pending. It is committed as an executable specification of the test
+# matrix: what is checked, on which OS, with which shell.
+# No secrets, no deploy steps.
 #
 # What it runs, per leg:
 #   - core/lib/merge-claude-settings.ps1 -SelfTest   (pwsh; on Windows also

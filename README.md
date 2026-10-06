@@ -439,12 +439,14 @@ events you rely on (the write-blocking half of the deny rules needs >= 2.1.228).
   (`core/tests/probe-hardening.ps1`, 19 checks: deny-gate rule ids including the
   quote-split evasions, the failure-log masking, and the `KitRoot` ownership /
   settings-dir refusal in both installers).
-- **macOS: BETA, not executed.** The macOS build of this kit has never been run on a Mac; its adapter
-  and wiring are shipped as-is. The intended manual validation steps are in `TEST-PLAN-MAC.md`
-  (macOS repository).
-- **CI: staged, not executed.** `.github/workflows/ci.yml` (matrix: `windows-latest`, `macos-latest`)
-  has never run on GitHub Actions. It is committed as an executable specification of the intended
-  matrix; no secrets and no deploy steps.
+- **macOS: BETA, largely not executed.** The shell adapters and the smoke harness have not run on a
+  Mac; the merge-engine `-SelfTest` ran for the first time on a macOS runner via CI on 2026-10-06 and
+  failed in 7 s on a null `$env:TEMP` (class fixed in the same round; re-run pending). The intended
+  manual validation steps are in `TEST-PLAN-MAC.md` (macOS repository).
+- **CI: executed once (2026-10-06), re-run pending.** `.github/workflows/ci.yml` (matrix:
+  `windows-latest`, `macos-latest`): the Windows leg was green; the macOS leg went red on the null
+  `$env:TEMP` class, fixed since. It remains an executable specification of the intended matrix; no
+  secrets and no deploy steps.
 - **Coverage and remainder (COPERTURA / RESTO).** What is covered, with which test, and what is not
   covered is stated in `COPERTURA-RESTO.md` (the verification ledger), `KNOWN-ISSUES.md` and
   `ANALISI-USO.md`; the macOS remainder is enumerated in `TEST-PLAN-MAC.md`. Nothing in this README

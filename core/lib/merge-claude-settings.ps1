@@ -275,7 +275,13 @@ if ($SelfTest) {
     # ('merge-selftest-<PID>') and never cleaned, so a RERUN picked up the previous
     # run's files (observed: same code -> 37 PASS / 4 FAIL) and every run littered
     # %TEMP% (53 stale dirs counted). Fresh unique dir per run + cleanup at the end.
-    $sb = Join-Path $env:TEMP ('merge-selftest-' + $PID + '-' + ([guid]::NewGuid().ToString('N').Substring(0, 8)))
+    # Sandbox root, OS-aware: $env:TEMP does not exist outside Windows (macOS and
+    # Linux use TMPDIR), and Join-Path on a null Path aborted the whole selftest
+    # (RED on the first real CI run, macos-latest leg, 2026-10-06). GetTempPath()
+    # honors TMPDIR on Unix and TMP/TEMP/USERPROFILE on Windows -- the same pattern
+    # smoke.ps1, probe-hardening.ps1 and verify.ps1 already use.
+    $tempRoot = [System.IO.Path]::GetTempPath()
+    $sb = Join-Path $tempRoot ('merge-selftest-' + $PID + '-' + ([guid]::NewGuid().ToString('N').Substring(0, 8)))
     [void](New-Item -ItemType Directory -Path $sb -Force)
     $pass = 0; $fail = 0
     function Check([string]$name, [bool]$ok) {

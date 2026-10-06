@@ -140,9 +140,9 @@ never been executed on macOS.
 
 **Cause.** Development and testing happened on Windows only. The changelog states the
 macOS path is BETA and untested; `TEST-PLAN-MAC.md` records the intended validation
-steps; the CI workflow is committed as an executable specification but has **never
-run** [measured: CHANGELOG.md, 0.1.0 notes; measured: .github/workflows/ci.yml
-header].
+steps; the CI workflow first ran on 2026-10-06 (on push) and its macOS leg failed in
+7 s on a null `$env:TEMP` (class fixed in the same round; re-run pending) [measured:
+GitHub Actions runs, 2026-10-06; CHANGELOG.md, 0.1.0 notes].
 
 **Partial mitigation (measured).** The PowerShell half of the macOS repository is now
 byte-identical to the Windows one (`tools/verify-parity.ps1`: 31/31 core files,
@@ -206,8 +206,8 @@ a full integration test would need Claude Code itself in the loop.
 **Workaround.** After any local change to the hooks, run one short real session and
 check: (a) the `[AGENT_CONTEXT]` block appears at startup (and after a `/compact`),
 (b) a deliberate tool failure adds one row to `.agent/FAILURES.md`, (c) the archive
-directory gains a file after a compaction. The CI workflow, when finally executed, is
-staged and not proof of integration either.
+directory gains a file after a compaction. The CI workflow (first executed 2026-10-06)
+is not proof of integration either.
 
 **Status.** Open.
 
@@ -397,16 +397,15 @@ files; re-run `install.ps1 -Apply` to re-enable.
 
 **Status.** Open (by design in v0.1.0).
 
-## 15. CI is staged and not pinning-proof (derived)
+## 15. CI is not pinning-proof (derived)
 
-**Symptom.** `.github/workflows/ci.yml` has never run on GitHub Actions, and its two
-workflow steps use floating references: `actions/checkout@v4` (a tag, not a commit
-SHA) and the runner labels `windows-latest` / `macos-latest`.
+**Symptom.** `.github/workflows/ci.yml` (first executed 2026-10-06) uses floating
+references: `actions/checkout@v4` (a tag, not a commit SHA) and the runner labels
+`windows-latest` / `macos-latest`.
 
-**Impact.** When the workflow is finally run, what executes is whatever the tag and
-the runner image happen to be at that moment — a moved tag or an updated runner image
-changes the environment without any change in this repository. It is also, by
-definition, not evidence of anything today.
+**Impact.** What executes is whatever the tag and the runner image happen to be at
+that moment — a moved tag or an updated runner image changes the environment without
+any change in this repository. One run is also not a stability proof.
 
 **Cause.** Staged as an executable specification of the intended matrix; pinning was
 deferred [code: .github/workflows/ci.yml].
@@ -414,7 +413,8 @@ deferred [code: .github/workflows/ci.yml].
 **Workaround.** Before relying on CI, pin `actions/checkout` to a commit SHA and
 consider versioned runner images.
 
-**Status.** Open (staged, not executed; see also `COPERTURA-RESTO.md`).
+**Status.** Open (executed 2026-10-06: Windows leg green, macOS leg red on the null
+`$env:TEMP` class — fixed, re-run pending; see also `COPERTURA-RESTO.md`).
 
 ## 16. Scan budget: very long commands are denied fail-closed by the opt-in sensor (derived)
 
