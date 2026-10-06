@@ -509,22 +509,43 @@ if ($SelfTest) {
     try { $r13d = Merge-ClaudeSettings -Path $p13d } catch { $threw13d = $true }
     Check '13d null hooks/permissions -> treated as empty (updated, 4 + 3)' ((-not $threw13d) -and $r13d.Result -eq 'updated' -and $r13d.Added -eq 4 -and $r13d.DenyAdded -eq 3)
 
-    # case 14: F5 discriminator -- the target is locked (FileAccess.Read + FileShare.Read:
-    # the BACKUP copy succeeds, only the replace fails). Save must fail CLOSED and, above
-    # all, must NOT leave the temp file behind (pre-F5: single Move-Item, temp orphaned
-    # on every failure -- RED proof, 2026-10-06) and must NOT alter the existing file.
+    # case 14: F5 discriminator -- an UNWRITABLE target. Save must fail CLOSED and,
+    # above all, must NOT leave the temp file behind (pre-F5: single Move-Item, temp
+    # orphaned on every failure -- RED proof, 2026-10-06) and must NOT alter the
+    # existing file. Two platform simulations, same three assertions:
+    #   Windows: the target is held open (FileAccess.Read + FileShare.Read): the
+    #     BACKUP copy succeeds, only the replace fails (mandatory locks).
+    #   macOS/Linux: locks are advisory and a rename over an open file always
+    #     succeeds, so the equivalent unwritable condition is a read-only sandbox
+    #     directory -- the save fails with EACCES at its first write. (The orphaned-
+    #     temp RED stays a Windows-only discrimination: only mandatory locks fail
+    #     the Move after the temp exists.)
+    # Unix branch first executed live on the macos CI leg, 2026-10-06: found by the
+    # re-run as 43 PASS / 1 FAIL (14a), the Windows-only lock simulation.
     $p14 = Join-Path $sb 'case14.json'
     $r14 = Merge-ClaudeSettings -Path $p14
     $null = Save-ClaudeSettings -Path $p14 -Root $r14.Root   # creates: no backup
     $h14before = Get-Sha256Hex -Path $p14
     $r14b = Merge-ClaudeSettings -Path $p14
-    $fs14 = $null
     $threw14 = $false
-    try {
-        $fs14 = New-Object System.IO.FileStream($p14, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
-        try { $null = Save-ClaudeSettings -Path $p14 -Root $r14b.Root } catch { $threw14 = $true }
-    } finally {
-        if ($fs14) { $fs14.Close() }
+    if ($env:OS -eq 'Windows_NT') {
+        $fs14 = $null
+        try {
+            $fs14 = New-Object System.IO.FileStream($p14, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+            try { $null = Save-ClaudeSettings -Path $p14 -Root $r14b.Root } catch { $threw14 = $true }
+        } finally {
+            if ($fs14) { $fs14.Close() }
+        }
+    } else {
+        # UnixFileMode exists from .NET 7 up (pwsh 7.4 on the macOS runners).
+        $oldMode = [System.IO.File]::GetUnixFileMode($sb)
+        $roMode = [System.IO.UnixFileMode]::UserRead -bor [System.IO.UnixFileMode]::UserExecute
+        try {
+            [System.IO.File]::SetUnixFileMode($sb, $roMode)
+            try { $null = Save-ClaudeSettings -Path $p14 -Root $r14b.Root } catch { $threw14 = $true }
+        } finally {
+            [System.IO.File]::SetUnixFileMode($sb, $oldMode)
+        }
     }
     $orphans14 = @(Get-ChildItem -LiteralPath $sb -Filter 'case14.json.tmp-*' -ErrorAction SilentlyContinue)
     $h14after = Get-Sha256Hex -Path $p14

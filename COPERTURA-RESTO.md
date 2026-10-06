@@ -300,25 +300,36 @@ repository.
    activation on Windows (manual, one machine, not a shipped test).
 10. **T3/T8 stress matrices not shipped.** The large-state injection and
     cap-boundary stress matrices live in the internal build workspace only.
-11. **CI executed once (2026-10-06), not pinning-proof.** `.github/workflows/ci.yml`
+11. **CI executed twice (2026-10-06), not pinning-proof.** `.github/workflows/ci.yml`
     uses `actions/checkout@v4` (tag, not SHA) and floating runner labels
-    (KNOWN-ISSUES #15). First run: `windows-latest` leg green; `macos-latest` leg
+    (KNOWN-ISSUES #15). Run 1: `windows-latest` leg green; `macos-latest` leg
     red in 7 s on a null `$env:TEMP` in the merge-engine selftest — class fix
-    applied (OS-aware sandbox root; RED->GREEN proven locally), re-run pending.
-    One run is not a stability proof.
+    applied (OS-aware sandbox root; RED->GREEN proven locally). Run 2 (after that
+    fix): Windows legs green; macOS legs red on selftest case 14a — the lock
+    simulation cannot fail on Unix, where FileShare locks are advisory — now
+    OS-branched (read-only sandbox directory on Unix; same three assertions;
+    RED->GREEN proven locally on Windows in both interpreters and the null-env
+    proxy). Re-run pending. Two runs are not a stability proof.
 12. **Uninstall semantic deviation (declared).** `permissions.deny` rules are kept
     by default on uninstall; removal requires the explicit `-RemoveDenyRules`
     switch. Declared deviation, not covered by shipped tests.
-13. **Settings-save lock behavior (F5) not asserted by any shipped test.** The
-    retry/no-orphan contract was proven with a development probe that locks the
-    target (`FileShare::None`); the shipped smoke exercises only the normal save
-    path.
+13. **Settings-save lock behavior (F5): asserted on Windows; partial on Unix.** The
+    retry/no-orphan contract is asserted by the shipped merge-engine selftest
+    (case 14: unwritable target -> Save throws, no orphan temp, existing file
+    unchanged). On Windows the target is held open with a handle lock — the
+    platform where mandatory locks can fail the atomic replace, so the orphaned-
+    temp discrimination of the F5 fix is reproducible. On macOS/Linux locks are
+    advisory, so the same case uses a read-only sandbox directory (the save fails
+    with EACCES at its first write): it asserts fail-closed and no-orphan, NOT the
+    failed-replace orphan path, which no Unix simulation reproduces. The
+    development probe (`FileShare::None`, internal workspace) is not shipped.
 14. **Campaign #3 class probes are not shipped.** `p1`–`p4`, `p6`–`p8`,
     `boundary-fi` and `p8-e-locale` live in the internal build workspace. Their
     observable contracts that ARE shipped: F7 deny + masking and F2 ownership /
     settings-dir (shipped probe), F6 in-project discriminator and the scan-budget
-    boundary (shipped smoke). The F1 structural sweep, F3 flavor matrix, F4 parity
-    invariant and F5 lock matrix have no shipped equivalent.
+    boundary (shipped smoke). The F1 structural sweep, F3 flavor matrix and F4
+    parity invariant have no shipped equivalent; the F5 retry/no-orphan contract
+    is asserted by selftest case 14 (Windows branch; see item 13).
 15. **macOS shell adapters: syntax only.** `bash -n` proves the three `.sh` files
     parse; nothing about their runtime behavior on macOS is proven (see item 1).
 16. Anything not listed under Coverage is unverified: assume it.

@@ -140,8 +140,11 @@ never been executed on macOS.
 
 **Cause.** Development and testing happened on Windows only. The changelog states the
 macOS path is BETA and untested; `TEST-PLAN-MAC.md` records the intended validation
-steps; the CI workflow first ran on 2026-10-06 (on push) and its macOS leg failed in
-7 s on a null `$env:TEMP` (class fixed in the same round; re-run pending) [measured:
+steps; the CI workflow ran twice on 2026-10-06 (on push): the macOS leg of the first
+run failed in 7 s on a null `$env:TEMP`, and the macOS leg of the second (after that
+fix) went red on the case-14 lock simulation — FileShare locks are advisory on Unix,
+so the case could never pass there. Both Windows-only assumptions in the selftest
+itself, both fixed at class level; re-run pending [measured:
 GitHub Actions runs, 2026-10-06; CHANGELOG.md, 0.1.0 notes].
 
 **Partial mitigation (measured).** The PowerShell half of the macOS repository is now
@@ -413,8 +416,10 @@ deferred [code: .github/workflows/ci.yml].
 **Workaround.** Before relying on CI, pin `actions/checkout` to a commit SHA and
 consider versioned runner images.
 
-**Status.** Open (executed 2026-10-06: Windows leg green, macOS leg red on the null
-`$env:TEMP` class — fixed, re-run pending; see also `COPERTURA-RESTO.md`).
+**Status.** Open (executed twice on 2026-10-06: the Windows legs were green in both
+runs; the macOS legs were red on two Windows-only assumptions in the selftest itself —
+null `$env:TEMP`, then the case-14 lock simulation — both fixed, re-run pending; see
+also `COPERTURA-RESTO.md`).
 
 ## 16. Scan budget: very long commands are denied fail-closed by the opt-in sensor (derived)
 

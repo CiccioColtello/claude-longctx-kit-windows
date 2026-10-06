@@ -1,12 +1,20 @@
 # CI for the longctx kit.
 #
-# STATUS: EXECUTED -- first run 2026-10-06 (on push).
-# windows-latest leg: green (1 m 14 s). macos-latest leg: red in 7 s on a null
-# $env:TEMP in merge-claude-settings.ps1 -SelfTest (the variable does not exist
-# on macOS). Class fixed in the same round (OS-aware sandbox root,
-# [System.IO.Path]::GetTempPath(); RED->GREEN proven locally); re-run after the
-# fix pending. It is committed as an executable specification of the test
-# matrix: what is checked, on which OS, with which shell.
+# STATUS: EXECUTED -- two runs on 2026-10-06 (on push).
+# Run 1: windows-latest leg green (1 m 14 s). macos-latest leg red in 7 s on a
+# null $env:TEMP in merge-claude-settings.ps1 -SelfTest (the variable does not
+# exist on macOS) -- fixed in the same round (OS-aware sandbox root,
+# [System.IO.Path]::GetTempPath(); RED->GREEN proven locally).
+# Run 2 (after that fix): Windows legs green; macOS legs red on case 14a of the
+# selftest -- the lock simulation assumes Windows semantics (FileShare locks are
+# mandatory there, advisory on Unix, so a rename over an open file always
+# succeeds and the case could never pass). Case 14 is now OS-branched: Windows
+# keeps the handle lock; on macOS/Linux the unwritable target is a read-only
+# sandbox directory (EACCES at the save's first write), same three assertions.
+# RED->GREEN proven locally on Windows in both interpreters, plus the null-env
+# proxy; the Unix branch first executes on the re-run that is pending. It is
+# committed as an executable specification of the test matrix: what is checked,
+# on which OS, with which shell.
 # No secrets, no deploy steps.
 #
 # What it runs, per leg:
